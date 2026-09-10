@@ -69,6 +69,7 @@ export interface UserHealthProfile {
   dailyStepGoal: number;
   dailyWaterGoalMl: number;
   dailySleepGoalHours: number;
+  dailyCalorieGoal?: number;
   emergencyContact: {
     name: string;
     relationship: string;
@@ -88,3 +89,51 @@ export interface NotificationItem {
   type: "reminder" | "alert" | "milestone" | "info";
   isRead: boolean;
 }
+
+export interface HydrationLogItem {
+  id: string;
+  timestamp: string; // ISO
+  amountMl: number;
+  beverageType: "Water" | "Electrolyte" | "Tea" | "Coffee" | "Juice";
+}
+
+export interface MealItem {
+  id: string;
+  name: string;
+  mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  time: string;
+}
+
+export interface MoodEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  timestamp: string;
+  score: 1 | 2 | 3 | 4 | 5; // 1: Anxious/Exhausted, 2: Low, 3: Neutral/Calm, 4: Good, 5: Energetic/Thriving
+  primaryMood: "Energetic" | "Calm" | "Neutral" | "Stressed" | "Anxious" | "Exhausted";
+  energyLevel: number; // 1-10
+  stressLevel: number; // 1-10
+  tags: string[]; // e.g. ["Work", "Workout", "Meditation", "Poor Sleep"]
+  journalNote?: string;
+}
+
+export interface LabTestReport {
+  id: string;
+  title: string;
+  testDate: string;
+  category: "Lipid Panel" | "Complete Blood Count (CBC)" | "Metabolic Panel" | "Thyroid Panel" | "Other";
+  status: "Normal" | "Attention Required" | "Critical";
+  summary: string;
+  markers: {
+    name: string;
+    value: number | string;
+    unit: string;
+    referenceRange: string;
+    status: "normal" | "low" | "high";
+    clinicalContext: string;
+  }[];
+}
+

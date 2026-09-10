@@ -6,6 +6,7 @@ import {
   Activity,
   Footprints,
   Moon,
+  Bot,
   FileBarChart2,
   BellRing,
   UserCheck,
@@ -13,7 +14,9 @@ import {
   ShieldAlert,
   HeartPulse,
   Sparkles,
-  Droplet,
+  Droplets,
+  Utensils,
+  Brain,
   ChevronRight,
 } from "lucide-react";
 import { useHealth } from "@/context/HealthContext";
@@ -32,9 +35,13 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: SidebarPro
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, badge: null },
+    { id: "assistant", label: "AI Health Copilot", icon: Bot, badge: "AI" },
     { id: "metrics", label: "Health Metrics", icon: Activity, badge: null },
     { id: "activity", label: "Activity Tracker", icon: Footprints, badge: null },
     { id: "sleep", label: "Sleep Health", icon: Moon, badge: null },
+    { id: "hydration", label: "Hydration", icon: Droplets, badge: null },
+    { id: "nutrition", label: "Nutrition & Macros", icon: Utensils, badge: null },
+    { id: "wellness", label: "Mental Wellness", icon: Brain, badge: null },
     { id: "reminders", label: "Reminders", icon: BellRing, badge: activeRemindersCount > 0 ? String(activeRemindersCount) : null },
     { id: "reports", label: "Reports & Export", icon: FileBarChart2, badge: null },
     { id: "profile", label: "Medical Profile", icon: UserCheck, badge: null },

@@ -8,6 +8,10 @@ import {
   ReminderItem,
   UserHealthProfile,
   NotificationItem,
+  HydrationLogItem,
+  MealItem,
+  MoodEntry,
+  LabTestReport,
 } from "@/types/health";
 import {
   initialProfile,
@@ -16,6 +20,10 @@ import {
   initialSleepData,
   initialReminders,
   initialNotifications,
+  initialHydrationLogs,
+  initialMeals,
+  initialMoodLogs,
+  initialLabReports,
 } from "@/data/mockData";
 import { calculateHealthScore } from "@/utils/healthCalc";
 import { supabase } from "@/lib/supabase";
@@ -47,8 +55,17 @@ interface HealthContextType {
   addReminder: (reminder: Omit<ReminderItem, "id" | "isActive">) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   waterIntakeTodayMl: number;
-  logWater: (amountMl: number) => void;
+  hydrationLogs: HydrationLogItem[];
+  logWater: (amountMl: number, beverageType?: HydrationLogItem["beverageType"]) => void;
   resetWater: () => void;
+  meals: MealItem[];
+  addMeal: (meal: Omit<MealItem, "id" | "time">) => void;
+  deleteMeal: (id: string) => void;
+  moodLogs: MoodEntry[];
+  todayMood: MoodEntry | null;
+  logMood: (entry: Omit<MoodEntry, "id" | "timestamp" | "date">) => void;
+  labReports: LabTestReport[];
+  addLabReport: (report: Omit<LabTestReport, "id">) => void;
   healthScoreData: ReturnType<typeof calculateHealthScore>;
   notifications: NotificationItem[];
   markNotificationAsRead: (id: string) => void;
@@ -77,7 +94,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
   const [sleepData, setSleepData] = useState<SleepEntry[]>(initialSleepData);
   const [reminders, setReminders] = useState<ReminderItem[]>(initialReminders);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [waterIntakeTodayMl, setWaterIntakeTodayMl] = useState<number>(0);
+  const [waterIntakeTodayMl, setWaterIntakeTodayMl] = useState<number>(1500);
+  const [hydrationLogs, setHydrationLogs] = useState<HydrationLogItem[]>(initialHydrationLogs);
+  const [meals, setMeals] = useState<MealItem[]>(initialMeals);
+  const [moodLogs, setMoodLogs] = useState<MoodEntry[]>(initialMoodLogs);
+  const [labReports, setLabReports] = useState<LabTestReport[]>(initialLabReports);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = ({ type, title, message }: Omit<ToastMessage, "id">) => {
@@ -424,7 +445,14 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({ type: "info", title: "Reminder Removed" });
   };
 
-  const logWater = (amountMl: number) => {
+  const logWater = (amountMl: number, beverageType: HydrationLogItem["beverageType"] = "Water") => {
+    const newLog: HydrationLogItem = {
+      id: `hyd-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      amountMl,
+      beverageType,
+    };
+    setHydrationLogs((prev) => [newLog, ...prev]);
     setWaterIntakeTodayMl((prev) => {
       const updated = prev + amountMl;
       localStorage.setItem("healthtrack_water", String(updated));
@@ -433,13 +461,65 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({
       type: "info",
       title: "Hydration Logged",
-      message: `+${amountMl} ml recorded! (${waterIntakeTodayMl + amountMl} / ${profile.dailyWaterGoalMl} ml)`,
+      message: `+${amountMl} ml (${beverageType}) recorded! Total: ${waterIntakeTodayMl + amountMl} / ${profile.dailyWaterGoalMl} ml`,
     });
   };
 
   const resetWater = () => {
     setWaterIntakeTodayMl(0);
+    setHydrationLogs([]);
     localStorage.setItem("healthtrack_water", "0");
+  };
+
+  const addMeal = (meal: Omit<MealItem, "id" | "time">) => {
+    const newMeal: MealItem = {
+      ...meal,
+      id: `meal-${Date.now()}`,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    setMeals((prev) => [newMeal, ...prev]);
+    showToast({
+      type: "success",
+      title: "Meal Logged",
+      message: `${meal.name} (+${meal.calories} kcal) added to daily nutrition.`,
+    });
+  };
+
+  const deleteMeal = (id: string) => {
+    setMeals((prev) => prev.filter((m) => m.id !== id));
+    showToast({ type: "info", title: "Meal Removed" });
+  };
+
+  const logMood = (entry: Omit<MoodEntry, "id" | "timestamp" | "date">) => {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const newMood: MoodEntry = {
+      ...entry,
+      id: `mood-${Date.now()}`,
+      date: today,
+      timestamp: now.toISOString(),
+    };
+    setMoodLogs((prev) => [newMood, ...prev]);
+    showToast({
+      type: "success",
+      title: "Mental Wellness Logged",
+      message: `Mood: ${entry.primaryMood} (Energy: ${entry.energyLevel}/10, Stress: ${entry.stressLevel}/10) recorded.`,
+    });
+  };
+
+  const todayMood: MoodEntry | null = moodLogs.length > 0 ? moodLogs[0] : null;
+
+  const addLabReport = (report: Omit<LabTestReport, "id">) => {
+    const newReport: LabTestReport = {
+      ...report,
+      id: `lab-${Date.now()}`,
+    };
+    setLabReports((prev) => [newReport, ...prev]);
+    showToast({
+      type: "success",
+      title: "Lab Report Added",
+      message: `${report.title} analyzed and saved to medical record.`,
+    });
   };
 
   const markNotificationAsRead = (id: string) => {
@@ -456,12 +536,12 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     setProfile((prev) => ({
       ...prev,
       role: role === "Student" ? "Student" : "General User",
-      name: "HealthTrack User",
+      name: "Alex Morgan",
     }));
     showToast({
       type: "success",
       title: "Signed In",
-      message: `Welcome to HealthTrack!`,
+      message: `Welcome to HealthTrack Pro!`,
     });
   };
 
@@ -473,14 +553,18 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
 
   const resetAllDataToDefaults = () => {
     setProfile(initialProfile);
-    setVitals([]);
+    setVitals(initialVitalsHistory);
     setActivities(initialActivities);
-    setSleepData([]);
-    setReminders([]);
-    setNotifications([]);
-    setWaterIntakeTodayMl(0);
+    setSleepData(initialSleepData);
+    setReminders(initialReminders);
+    setNotifications(initialNotifications);
+    setHydrationLogs(initialHydrationLogs);
+    setMeals(initialMeals);
+    setMoodLogs(initialMoodLogs);
+    setLabReports(initialLabReports);
+    setWaterIntakeTodayMl(1500);
     localStorage.clear();
-    showToast({ type: "info", title: "Data Cleared", message: "All health data reset to clean initial state." });
+    showToast({ type: "info", title: "Data Reset", message: "All health data reset to demo baseline." });
   };
 
   const healthScoreData = calculateHealthScore({
@@ -519,8 +603,17 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
         addReminder,
         deleteReminder,
         waterIntakeTodayMl,
+        hydrationLogs,
         logWater,
         resetWater,
+        meals,
+        addMeal,
+        deleteMeal,
+        moodLogs,
+        todayMood,
+        logMood,
+        labReports,
+        addLabReport,
         healthScoreData,
         notifications,
         markNotificationAsRead,
@@ -549,3 +642,4 @@ export function useHealth() {
   }
   return context;
 }
+

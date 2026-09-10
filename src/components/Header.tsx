@@ -47,9 +47,13 @@ export function Header({ onToggleSidebar, activeTab }: HeaderProps) {
 
   const tabTitles: Record<string, string> = {
     dashboard: "Health Dashboard",
+    assistant: "AI Health Assistant & Copilot",
     metrics: "Clinical Metrics & Vitals",
     activity: "Activity & Fitness",
     sleep: "Sleep & Recovery",
+    hydration: "Hydration Intelligence",
+    nutrition: "Nutrition & Macronutrients",
+    wellness: "Mental Wellness & Recovery",
     reminders: "Medication & Care Reminders",
     reports: "Health Reports & Summaries",
     profile: "Health Profile & Emergency Contacts",

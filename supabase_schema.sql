@@ -83,16 +83,61 @@ create table if not exists public.reminders (
   created_at timestamptz default now()
 );
 
--- 6. Enable Row Level Security (RLS)
+-- 6. Hydration Logs Table
+create table if not exists public.hydration_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  amount_ml integer not null,
+  beverage_type text default 'Water', -- 'Water', 'Electrolyte', 'Tea', 'Coffee', 'Juice'
+  recorded_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- 7. Meals & Nutrition Table
+create table if not exists public.meals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  meal_type text default 'Lunch', -- 'Breakfast', 'Lunch', 'Dinner', 'Snack'
+  calories integer not null,
+  protein_g numeric(5,1) default 0,
+  carbs_g numeric(5,1) default 0,
+  fat_g numeric(5,1) default 0,
+  time text,
+  created_at timestamptz default now()
+);
+
+-- 8. Mental Wellness & Mood Logs Table
+create table if not exists public.mood_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  score integer not null check (score between 1 and 5),
+  primary_mood text not null, -- 'Energetic', 'Calm', 'Neutral', 'Stressed', 'Anxious', 'Exhausted'
+  energy_level integer default 7 check (energy_level between 1 and 10),
+  stress_level integer default 3 check (stress_level between 1 and 10),
+  tags text[] default array[]::text[],
+  journal_note text,
+  recorded_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+-- 9. Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;
 alter table public.vitals_history enable row level security;
 alter table public.activities enable row level security;
 alter table public.sleep_logs enable row level security;
 alter table public.reminders enable row level security;
+alter table public.hydration_logs enable row level security;
+alter table public.meals enable row level security;
+alter table public.mood_logs enable row level security;
 
--- 7. Public RLS Access Policies (Allows read/write for authenticated users & anon access for demo)
+-- 10. Public RLS Access Policies (Allows read/write for authenticated users & anon access for demo)
 create policy "Allow all operations for profiles" on public.profiles for all using (true) with check (true);
 create policy "Allow all operations for vitals_history" on public.vitals_history for all using (true) with check (true);
 create policy "Allow all operations for activities" on public.activities for all using (true) with check (true);
 create policy "Allow all operations for sleep_logs" on public.sleep_logs for all using (true) with check (true);
 create policy "Allow all operations for reminders" on public.reminders for all using (true) with check (true);
+create policy "Allow all operations for hydration_logs" on public.hydration_logs for all using (true) with check (true);
+create policy "Allow all operations for meals" on public.meals for all using (true) with check (true);
+create policy "Allow all operations for mood_logs" on public.mood_logs for all using (true) with check (true);
+

@@ -16,6 +16,10 @@ import {
   Pill,
   Sparkles,
   Droplets,
+  Bot,
+  Zap,
+  Utensils,
+  Brain,
 } from "lucide-react";
 import { VitalCard } from "./VitalCard";
 import { HealthScoreCard } from "./HealthScoreCard";
@@ -37,6 +41,8 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
     profile,
     reminders,
     markReminderTaken,
+    meals,
+    todayMood,
   } = useHealth();
 
   const [showReadingModal, setShowReadingModal] = useState(false);
@@ -83,6 +89,36 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
     <div className="space-y-6">
       {/* 1. Daily Health Score Hero */}
       <HealthScoreCard />
+
+      {/* AI Health Copilot Quick Insight Strip */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-teal-500/10 border border-sky-200/60 dark:border-sky-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-600 text-white shadow-md shadow-sky-600/20 shrink-0">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                HealthTrack AI Copilot
+              </h4>
+              <span className="px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 text-[9px] font-black uppercase tracking-wider">
+                Active Analysis
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Your resting heart rate ({latestVital?.heartRate ?? 72} BPM) and daily hydration are in steady alignment.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate("assistant")}
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-600/20 transition-all cursor-pointer shrink-0"
+        >
+          <span>Open AI Copilot</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {/* 2. Vitals Grid (6 Clinical & Activity Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -222,22 +258,61 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => logWater(250)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" /> 250 ml
               </button>
               <button
                 onClick={() => logWater(500)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" /> 500 ml
               </button>
               <button
                 onClick={() => logWater(750)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" /> 750 ml
               </button>
+            </div>
+          </div>
+
+          {/* Quick Dual Card: Nutrition & Mental State */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Nutrition Card */}
+            <div
+              onClick={() => onNavigate("nutrition")}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs hover:border-emerald-500/50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                  <Utensils className="w-4 h-4" />
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+              </div>
+              <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">Nutrition</h5>
+              <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {meals.reduce((sum, m) => sum + m.calories, 0)} kcal
+              </p>
+              <span className="text-[10px] text-slate-400">{meals.length} meals logged</span>
+            </div>
+
+            {/* Mental Wellness Card */}
+            <div
+              onClick={() => onNavigate("wellness")}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs hover:border-indigo-500/50 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                  <Brain className="w-4 h-4" />
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+              </div>
+              <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">Mood State</h5>
+              <p className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+                {todayMood ? todayMood.primaryMood : "Check-in"}
+              </p>
+              <span className="text-[10px] text-slate-400">4-7-8 Breathing</span>
             </div>
           </div>
 

@@ -13,6 +13,10 @@ import { ReportsView } from "@/components/ReportsView";
 import { ProfileView } from "@/components/ProfileView";
 import { SettingsView } from "@/components/SettingsView";
 import { LandingPageView } from "@/components/LandingPageView";
+import { AIAssistantView } from "@/components/AIAssistantView";
+import { HydrationView } from "@/components/HydrationView";
+import { NutritionView } from "@/components/NutritionView";
+import { MentalWellnessView } from "@/components/MentalWellnessView";
 import { ToastContainer } from "@/components/ToastContainer";
 import { MedicalDisclaimerBanner } from "@/components/MedicalDisclaimer";
 
@@ -21,16 +25,31 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
+  const validTabs = [
+    "dashboard",
+    "assistant",
+    "metrics",
+    "activity",
+    "sleep",
+    "hydration",
+    "nutrition",
+    "wellness",
+    "reminders",
+    "reports",
+    "profile",
+    "settings",
+  ];
+
   // Sync with URL hash if present
   useEffect(() => {
     const hash = window.location.hash.replace("#", "");
-    if (hash && ["dashboard", "metrics", "activity", "sleep", "reminders", "reports", "profile", "settings"].includes(hash)) {
+    if (hash && validTabs.includes(hash)) {
       setActiveTab(hash);
     }
 
     const handleHashChange = () => {
       const currentHash = window.location.hash.replace("#", "");
-      if (currentHash && ["dashboard", "metrics", "activity", "sleep", "reminders", "reports", "profile", "settings"].includes(currentHash)) {
+      if (currentHash && validTabs.includes(currentHash)) {
         setActiveTab(currentHash);
       }
     };
@@ -78,9 +97,13 @@ function MainApp() {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             {activeTab === "dashboard" && <DashboardView onNavigate={handleTabChange} />}
+            {activeTab === "assistant" && <AIAssistantView />}
             {activeTab === "metrics" && <MetricsView />}
             {activeTab === "activity" && <ActivityView />}
             {activeTab === "sleep" && <SleepView />}
+            {activeTab === "hydration" && <HydrationView />}
+            {activeTab === "nutrition" && <NutritionView />}
+            {activeTab === "wellness" && <MentalWellnessView />}
             {activeTab === "reminders" && <RemindersView />}
             {activeTab === "reports" && <ReportsView />}
             {activeTab === "profile" && <ProfileView />}
