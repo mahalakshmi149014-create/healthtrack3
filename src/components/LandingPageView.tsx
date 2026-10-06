@@ -16,11 +16,13 @@ import {
   TrendingUp,
   Moon,
   Droplet,
+  Globe,
 } from "lucide-react";
 import { MedicalDisclaimerBadge } from "./MedicalDisclaimer";
+import { SUPPORTED_LANGUAGES } from "@/data/translations";
 
 export function LandingPageView() {
-  const { loginDemo } = useHealth();
+  const { loginDemo, language, setLanguage, t } = useHealth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -45,7 +47,26 @@ export function LandingPageView() {
             Health<span className="bg-gradient-to-r from-sky-600 to-teal-500 bg-clip-text text-transparent">Track</span>
           </span>
         </div>
-        <MedicalDisclaimerBadge />
+
+        <div className="flex items-center gap-3">
+          {/* Language Selector in Navbar */}
+          <div className="flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800/90 px-3 py-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700">
+            <Globe className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="dark:bg-slate-900 text-slate-800 dark:text-white">
+                  {l.flag} {l.nativeName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <MedicalDisclaimerBadge />
+        </div>
       </header>
 
       {/* Main Hero & Login Split */}
@@ -54,7 +75,7 @@ export function LandingPageView() {
         <div className="lg:col-span-7 space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100/90 dark:bg-sky-950/80 border border-sky-200/50 dark:border-sky-800/50 text-sky-800 dark:text-sky-300 text-xs font-bold shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 animate-pulse" />
-            <span>Digital Health Intelligence for Students & Everyday Wellness</span>
+            <span>{t.appSubtitle}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.15]">
@@ -65,15 +86,15 @@ export function LandingPageView() {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
-            Track resting heart rate, blood pressure stages, oxygenation, circadian sleep cycles, workouts, and medications in one centralized, high-fidelity dashboard.
+            Track resting heart rate, oxygenation, daily steps, water intake, sleep patterns, and medications with interactive insights and multilingual accessibility.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             {[
-              "Real-time Daily Health Index Score",
-              "AHA Blood Pressure Categorization",
-              "Hydration & Medication Alarms",
-              "Printable Summaries for Medical Visits",
+              "Daily Health Index Score (0-100)",
+              "Today at a Glance Smart Summary",
+              "Hydration & Medicine Alarms",
+              "Printable Medical Summary Reports",
             ].map((feature, idx) => (
               <div key={idx} className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-200">
                 <div className="p-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
@@ -95,81 +116,91 @@ export function LandingPageView() {
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white text-xs font-bold rounded-2xl shadow-lg shadow-sky-600/25 transition-all cursor-pointer active:scale-98"
               >
                 <GraduationCap className="w-4 h-4" />
-                Explore as Student (Alex)
+                {t.demoStudent}
               </button>
               <button
                 onClick={() => loginDemo("General User")}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold rounded-2xl border border-slate-700/60 transition-all cursor-pointer active:scale-98"
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-2xl border border-slate-200/80 dark:border-slate-700/80 transition-all cursor-pointer active:scale-98"
               >
                 <Users className="w-4 h-4" />
-                Explore as General User
+                {t.demoGeneral}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Col: Standard Sign In Form with Glassmorphism */}
-        <div className="lg:col-span-5 bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 p-8 shadow-2xl">
-          <div className="mb-6">
-            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-              Sign In to Your Portal
-            </h2>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
-              Access encrypted clinical telemetry & care reminders
-            </p>
-          </div>
-
-          <form onSubmit={handleCustomLogin} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                placeholder="student@university.edu"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/70 rounded-2xl text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all"
-              />
+        {/* Right Col: Supabase Auth Form with Language Selection */}
+        <div className="lg:col-span-5">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl relative overflow-hidden">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+              <div>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                  {t.login}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Secure Supabase Cloud Health Vault
+                </p>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400">
+                <Lock className="w-5 h-5" />
+              </div>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                Password
+            {/* Language Selector in Login Form */}
+            <div className="mb-5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                {t.selectLanguage}
               </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/70 rounded-2xl text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-hidden transition-all"
-              />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.flag} {l.nativeName} ({l.name})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-sky-600/25 transition-all cursor-pointer active:scale-98 mt-2"
-            >
-              Sign In to HealthTrack
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+            <form onSubmit={handleCustomLogin} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  placeholder="alex.morgan@healthtrack.io"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
-            <p className="text-[11px] font-medium text-slate-400">
-              HIPAA-aligned data sandbox • 256-bit client encryption
-            </p>
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-600/20 transition-all cursor-pointer mt-2"
+              >
+                {t.login}
+              </button>
+            </form>
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 px-6 py-6 border-t border-slate-200/60 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/40 text-center text-xs text-slate-500 dark:text-slate-400">
-        <p>
-          © 2026 HealthTrack Platform. Built for wellness education and self-monitoring.
-          Sample data is for demonstrative purposes and does not substitute professional medical diagnosis.
-        </p>
-      </footer>
     </div>
   );
 }

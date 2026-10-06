@@ -12,6 +12,9 @@ import {
   MealItem,
   MoodEntry,
   LabTestReport,
+  HealthNoteEntry,
+  PersonalHealthGoals,
+  ThemeMode,
 } from "@/types/health";
 import {
   initialProfile,
@@ -24,9 +27,12 @@ import {
   initialMeals,
   initialMoodLogs,
   initialLabReports,
+  initialHealthNotes,
+  initialPersonalGoals,
 } from "@/data/mockData";
 import { calculateHealthScore } from "@/utils/healthCalc";
 import { supabase } from "@/lib/supabase";
+import { translations, Language } from "@/data/translations";
 
 export interface ToastMessage {
   id: string;
@@ -36,45 +42,90 @@ export interface ToastMessage {
 }
 
 interface HealthContextType {
+  // Language & i18n
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (typeof translations)["en"];
+
+  // Theme & Appearance
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+
+  // Profile
   profile: UserHealthProfile;
   updateProfile: (data: Partial<UserHealthProfile>) => Promise<void>;
+
+  // Personal Goals
+  personalGoals: PersonalHealthGoals;
+  updatePersonalGoals: (goals: Partial<PersonalHealthGoals>) => void;
+
+  // Notes
+  healthNotes: HealthNoteEntry[];
+  addHealthNote: (note: Omit<HealthNoteEntry, "id" | "timestamp">) => void;
+  deleteHealthNote: (id: string) => void;
+
+  // Vitals & Metrics
   vitals: HealthMetricReading[];
   latestVital: HealthMetricReading | null;
   addVitalReading: (reading: Omit<HealthMetricReading, "id" | "timestamp">) => Promise<void>;
   deleteVitalReading: (id: string) => Promise<void>;
+
+  // Activities
   activities: ActivityEntry[];
   todayActivity: ActivityEntry;
   addActivityEntry: (entry: Partial<ActivityEntry>) => void;
-  addWorkout: (workout: { type: "Walking" | "Running" | "Cycling" | "Gym" | "Yoga" | "Swimming"; durationMinutes: number; calories: number }) => void;
+  addWorkout: (workout: {
+    type: "Walking" | "Running" | "Cycling" | "Gym" | "Yoga" | "Swimming";
+    durationMinutes: number;
+    calories: number;
+  }) => void;
+
+  // Sleep
   sleepData: SleepEntry[];
   latestSleep: SleepEntry | null;
   addSleepEntry: (entry: Omit<SleepEntry, "id">) => Promise<void>;
+
+  // Reminders
   reminders: ReminderItem[];
   toggleReminder: (id: string) => Promise<void>;
   markReminderTaken: (id: string) => Promise<void>;
   addReminder: (reminder: Omit<ReminderItem, "id" | "isActive">) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
+
+  // Hydration
   waterIntakeTodayMl: number;
   hydrationLogs: HydrationLogItem[];
   logWater: (amountMl: number, beverageType?: HydrationLogItem["beverageType"]) => void;
   resetWater: () => void;
+
+  // Nutrition & Meals
   meals: MealItem[];
   addMeal: (meal: Omit<MealItem, "id" | "time">) => void;
   deleteMeal: (id: string) => void;
+
+  // Mental Wellness
   moodLogs: MoodEntry[];
   todayMood: MoodEntry | null;
   logMood: (entry: Omit<MoodEntry, "id" | "timestamp" | "date">) => void;
+
+  // Reports & Lab
   labReports: LabTestReport[];
   addLabReport: (report: Omit<LabTestReport, "id">) => void;
+
+  // Composite Health Score
   healthScoreData: ReturnType<typeof calculateHealthScore>;
+
+  // Notifications & Toasts
   notifications: NotificationItem[];
   markNotificationAsRead: (id: string) => void;
   clearAllNotifications: () => void;
   toasts: ToastMessage[];
   showToast: (toast: Omit<ToastMessage, "id">) => void;
   dismissToast: (id: string) => void;
-  darkMode: boolean;
-  toggleDarkMode: () => void;
+
+  // Auth & Cloud
   isAuthenticated: boolean;
   isCloudConnected: boolean;
   loginDemo: (role?: "Student" | "General User") => void;
@@ -85,10 +136,15 @@ interface HealthContextType {
 const HealthContext = createContext<HealthContextType | undefined>(undefined);
 
 export function HealthProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<Language>("en");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+
   const [profile, setProfile] = useState<UserHealthProfile>(initialProfile);
+  const [personalGoals, setPersonalGoals] = useState<PersonalHealthGoals>(initialPersonalGoals);
+  const [healthNotes, setHealthNotes] = useState<HealthNoteEntry[]>(initialHealthNotes);
   const [vitals, setVitals] = useState<HealthMetricReading[]>(initialVitalsHistory);
   const [activities, setActivities] = useState<ActivityEntry[]>(initialActivities);
   const [sleepData, setSleepData] = useState<SleepEntry[]>(initialSleepData);
@@ -100,6 +156,8 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
   const [moodLogs, setMoodLogs] = useState<MoodEntry[]>(initialMoodLogs);
   const [labReports, setLabReports] = useState<LabTestReport[]>(initialLabReports);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const t = translations[language] || translations.en;
 
   const showToast = ({ type, title, message }: Omit<ToastMessage, "id">) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -113,11 +171,85 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Sync / Fetch initial data from Supabase
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try {
+      localStorage.setItem("healthtrack_lang", lang);
+    } catch {}
+  };
+
+  const applyTheme = (mode: ThemeMode) => {
+    let isDark = false;
+    if (mode === "dark") {
+      isDark = true;
+    } else if (mode === "light") {
+      isDark = false;
+    } else if (mode === "system") {
+      isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+
+    setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    try {
+      localStorage.setItem("healthtrack_theme_mode", mode);
+    } catch {}
+    applyTheme(mode);
+  };
+
+  const toggleDarkMode = () => {
+    const nextMode = darkMode ? "light" : "dark";
+    setThemeMode(nextMode);
+  };
+
+  // Sync / Fetch initial data
   useEffect(() => {
+    // 1. Language persistence
+    try {
+      const savedLang = localStorage.getItem("healthtrack_lang") as Language;
+      if (savedLang && translations[savedLang]) {
+        setLanguageState(savedLang);
+      }
+    } catch {}
+
+    // 2. Theme persistence
+    try {
+      const savedThemeMode = localStorage.getItem("healthtrack_theme_mode") as ThemeMode;
+      if (savedThemeMode) {
+        setThemeModeState(savedThemeMode);
+        applyTheme(savedThemeMode);
+      } else {
+        const legacyDark = localStorage.getItem("healthtrack_darkmode");
+        if (legacyDark !== null) {
+          const isDark = JSON.parse(legacyDark);
+          setThemeModeState(isDark ? "dark" : "light");
+          applyTheme(isDark ? "dark" : "light");
+        }
+      }
+    } catch {}
+
+    // 3. Notes & Goals persistence
+    try {
+      const savedGoals = localStorage.getItem("healthtrack_goals");
+      if (savedGoals) {
+        setPersonalGoals(JSON.parse(savedGoals));
+      }
+      const savedNotes = localStorage.getItem("healthtrack_notes");
+      if (savedNotes) {
+        setHealthNotes(JSON.parse(savedNotes));
+      }
+    } catch {}
+
+    // 4. Supabase & Remote Data
     async function loadData() {
       try {
-        // Test connection & load vitals from Supabase
         const { data: remoteVitals, error: vitalsErr } = await supabase
           .from("vitals_history")
           .select("*")
@@ -141,7 +273,6 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
           setIsCloudConnected(true);
         }
 
-        // Load reminders from Supabase
         const { data: remoteReminders, error: remErr } = await supabase
           .from("reminders")
           .select("*")
@@ -161,7 +292,6 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
           setReminders(mappedReminders);
         }
 
-        // Load profile from Supabase
         const { data: remoteProfiles, error: profErr } = await supabase
           .from("profiles")
           .select("*")
@@ -186,36 +316,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
             allergies: rp.allergies || [],
           });
         }
-      } catch {
-        // Fallback to clean state
-      }
-
-      // Check local storage for theme/cache
-      try {
-        const savedTheme = localStorage.getItem("healthtrack_darkmode");
-        if (savedTheme !== null) {
-          const isDark = JSON.parse(savedTheme);
-          setDarkMode(isDark);
-          if (isDark) document.documentElement.classList.add("dark");
-        }
       } catch {}
     }
 
     loadData();
   }, []);
-
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => {
-      const next = !prev;
-      if (next) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-      localStorage.setItem("healthtrack_darkmode", JSON.stringify(next));
-      return next;
-    });
-  };
 
   const updateProfile = async (data: Partial<UserHealthProfile>) => {
     const updated = { ...profile, ...data };
@@ -241,7 +346,45 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch {}
 
-    showToast({ type: "success", title: "Profile Synced", message: "Health profile synchronized with Supabase." });
+    showToast({ type: "success", title: "Profile Synced", message: "Health profile updated successfully." });
+  };
+
+  const updatePersonalGoals = (goals: Partial<PersonalHealthGoals>) => {
+    const updated = { ...personalGoals, ...goals };
+    setPersonalGoals(updated);
+    setProfile((prev) => ({
+      ...prev,
+      dailyStepGoal: updated.dailySteps,
+      dailyWaterGoalMl: updated.dailyWaterMl,
+      dailySleepGoalHours: updated.dailySleepHours,
+    }));
+    try {
+      localStorage.setItem("healthtrack_goals", JSON.stringify(updated));
+    } catch {}
+    showToast({ type: "success", title: "Goals Saved", message: "Personal health targets updated." });
+  };
+
+  const addHealthNote = (note: Omit<HealthNoteEntry, "id" | "timestamp">) => {
+    const newNote: HealthNoteEntry = {
+      ...note,
+      id: `note-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    const updated = [newNote, ...healthNotes];
+    setHealthNotes(updated);
+    try {
+      localStorage.setItem("healthtrack_notes", JSON.stringify(updated));
+    } catch {}
+    showToast({ type: "success", title: "Note Saved", message: `"${note.title}" added to health observations.` });
+  };
+
+  const deleteHealthNote = (id: string) => {
+    const updated = healthNotes.filter((n) => n.id !== id);
+    setHealthNotes(updated);
+    try {
+      localStorage.setItem("healthtrack_notes", JSON.stringify(updated));
+    } catch {}
+    showToast({ type: "info", title: "Note Removed" });
   };
 
   const latestVital: HealthMetricReading | null = vitals.length > 0 ? vitals[0] : null;
@@ -256,6 +399,26 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     const updated = [newEntry, ...vitals];
     setVitals(updated);
     localStorage.setItem("healthtrack_vitals", JSON.stringify(updated));
+
+    // Reading Alerts Check
+    const hasWarning =
+      reading.heartRate < 55 ||
+      reading.heartRate > 105 ||
+      reading.systolicBp > 135 ||
+      reading.diastolicBp > 90 ||
+      reading.spo2 < 95;
+
+    if (hasWarning) {
+      const alertNotif: NotificationItem = {
+        id: `alert-${Date.now()}`,
+        title: "Reading Attention Alert",
+        message: `Reading (${reading.heartRate} BPM, BP ${reading.systolicBp}/${reading.diastolicBp}) is outside reference range. Please review this reading.`,
+        time: "Just now",
+        type: "alert",
+        isRead: false,
+      };
+      setNotifications((prev) => [alertNotif, ...prev]);
+    }
 
     try {
       await supabase.from("vitals_history").insert({
@@ -272,8 +435,8 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
 
     showToast({
       type: "success",
-      title: "Vitals Recorded & Synced",
-      message: `HR: ${reading.heartRate} bpm | BP: ${reading.systolicBp}/${reading.diastolicBp} mmHg (Saved to Supabase)`,
+      title: "Vitals Recorded",
+      message: `HR: ${reading.heartRate} bpm | BP: ${reading.systolicBp}/${reading.diastolicBp} mmHg`,
     });
   };
 
@@ -293,12 +456,20 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
   const todayActivity = activities.find((a) => a.date === todayStr) || {
     id: "act-today",
     date: todayStr,
-    steps: 0,
-    stepGoal: profile.dailyStepGoal,
-    caloriesBurned: 0,
-    activeMinutes: 0,
-    distanceKm: 0,
-    workouts: [],
+    steps: 6842,
+    stepGoal: personalGoals.dailySteps || 8000,
+    caloriesBurned: 420,
+    activeMinutes: 30,
+    distanceKm: 5.1,
+    workouts: [
+      {
+        id: "w-demo",
+        type: "Running" as const,
+        durationMinutes: 30,
+        calories: 250,
+        time: "07:30 AM",
+      },
+    ],
   };
 
   const addActivityEntry = (entry: Partial<ActivityEntry>) => {
@@ -313,7 +484,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
           id: `act-${Date.now()}`,
           date: entry.date || todayStr,
           steps: entry.steps || 0,
-          stepGoal: profile.dailyStepGoal,
+          stepGoal: personalGoals.dailySteps,
           caloriesBurned: entry.caloriesBurned || 0,
           activeMinutes: entry.activeMinutes || 0,
           distanceKm: entry.distanceKm || 0,
@@ -326,7 +497,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({ type: "success", title: "Activity Updated", message: "Steps and workout metrics saved." });
   };
 
-  const addWorkout = (workout: { type: "Walking" | "Running" | "Cycling" | "Gym" | "Yoga" | "Swimming"; durationMinutes: number; calories: number }) => {
+  const addWorkout = (workout: {
+    type: "Walking" | "Running" | "Cycling" | "Gym" | "Yoga" | "Swimming";
+    durationMinutes: number;
+    calories: number;
+  }) => {
     const newWorkout = {
       id: `w-${Date.now()}`,
       ...workout,
@@ -345,7 +520,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       const filtered = prev.filter((a) => a.date !== todayStr);
       return [updatedToday, ...filtered];
     });
-    showToast({ type: "success", title: "Workout Logged", message: `${workout.type} (${workout.durationMinutes} min) saved!` });
+    showToast({
+      type: "success",
+      title: "Workout Logged",
+      message: `${workout.type} (${workout.durationMinutes} min) saved!`,
+    });
   };
 
   const latestSleep: SleepEntry | null = sleepData.length > 0 ? sleepData[0] : null;
@@ -370,7 +549,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch {}
 
-    showToast({ type: "success", title: "Sleep Logged", message: `${entry.totalHours} hrs sleep recorded to cloud.` });
+    showToast({ type: "success", title: "Sleep Logged", message: `${entry.totalHours} hrs sleep recorded.` });
   };
 
   const toggleReminder = async (id: string) => {
@@ -406,7 +585,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       await supabase.from("reminders").update({ last_taken_date: newDate }).eq("id", id);
     } catch {}
 
-    showToast({ type: "success", title: "Status Updated", message: "Reminder marked as completed!" });
+    showToast({ type: "success", title: "Reminder Completed", message: "Care routine marked as done." });
   };
 
   const addReminder = async (reminder: Omit<ReminderItem, "id" | "isActive">) => {
@@ -418,6 +597,17 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     const updated = [...reminders, newRem];
     setReminders(updated);
     localStorage.setItem("healthtrack_reminders", JSON.stringify(updated));
+
+    // Notification for reminder addition
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title: `Reminder Set: ${reminder.title}`,
+      message: `Scheduled for ${reminder.time} (${reminder.frequency})`,
+      time: "Just now",
+      type: "reminder",
+      isRead: false,
+    };
+    setNotifications((prev) => [notif, ...prev]);
 
     try {
       await supabase.from("reminders").insert({
@@ -461,7 +651,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({
       type: "info",
       title: "Hydration Logged",
-      message: `+${amountMl} ml (${beverageType}) recorded! Total: ${waterIntakeTodayMl + amountMl} / ${profile.dailyWaterGoalMl} ml`,
+      message: `+${amountMl} ml (${beverageType}) recorded!`,
     });
   };
 
@@ -481,7 +671,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({
       type: "success",
       title: "Meal Logged",
-      message: `${meal.name} (+${meal.calories} kcal) added to daily nutrition.`,
+      message: `${meal.name} (+${meal.calories} kcal) added.`,
     });
   };
 
@@ -503,7 +693,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({
       type: "success",
       title: "Mental Wellness Logged",
-      message: `Mood: ${entry.primaryMood} (Energy: ${entry.energyLevel}/10, Stress: ${entry.stressLevel}/10) recorded.`,
+      message: `Mood: ${entry.primaryMood} recorded.`,
     });
   };
 
@@ -518,7 +708,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     showToast({
       type: "success",
       title: "Lab Report Added",
-      message: `${report.title} analyzed and saved to medical record.`,
+      message: `${report.title} saved to record.`,
     });
   };
 
@@ -536,7 +726,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     setProfile((prev) => ({
       ...prev,
       role: role === "Student" ? "Student" : "General User",
-      name: "Alex Morgan",
+      name: role === "Student" ? "Alex Morgan" : "Jordan Morgan",
     }));
     showToast({
       type: "success",
@@ -553,6 +743,8 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
 
   const resetAllDataToDefaults = () => {
     setProfile(initialProfile);
+    setPersonalGoals(initialPersonalGoals);
+    setHealthNotes(initialHealthNotes);
     setVitals(initialVitalsHistory);
     setActivities(initialActivities);
     setSleepData(initialSleepData);
@@ -574,18 +766,30 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     spo2: latestVital ? latestVital.spo2 : 98,
     temperature: latestVital ? latestVital.temperature : 98.6,
     steps: todayActivity.steps,
-    stepGoal: profile.dailyStepGoal,
-    sleepHours: latestSleep ? latestSleep.totalHours : 8,
-    sleepGoal: profile.dailySleepGoalHours,
+    stepGoal: personalGoals.dailySteps || profile.dailyStepGoal,
+    sleepHours: latestSleep ? latestSleep.totalHours : 7.33,
+    sleepGoal: personalGoals.dailySleepHours || profile.dailySleepGoalHours,
     waterMl: waterIntakeTodayMl,
-    waterGoal: profile.dailyWaterGoalMl,
+    waterGoal: personalGoals.dailyWaterMl || profile.dailyWaterGoalMl,
   });
 
   return (
     <HealthContext.Provider
       value={{
+        language,
+        setLanguage,
+        t,
+        themeMode,
+        setThemeMode,
+        darkMode,
+        toggleDarkMode,
         profile,
         updateProfile,
+        personalGoals,
+        updatePersonalGoals,
+        healthNotes,
+        addHealthNote,
+        deleteHealthNote,
         vitals,
         latestVital,
         addVitalReading,
@@ -621,8 +825,6 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
         toasts,
         showToast,
         dismissToast,
-        darkMode,
-        toggleDarkMode,
         isAuthenticated,
         isCloudConnected,
         loginDemo,
@@ -642,4 +844,3 @@ export function useHealth() {
   }
   return context;
 }
-

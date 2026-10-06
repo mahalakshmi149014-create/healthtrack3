@@ -137,3 +137,24 @@ export interface LabTestReport {
   }[];
 }
 
+export interface PersonalHealthGoals {
+  dailySteps: number;
+  dailyWaterMl: number;
+  dailySleepHours: number;
+  dailyWorkoutMinutes: number;
+  dailyActiveCalories: number;
+}
+
+export interface HealthNoteEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  timestamp: string;
+  category: "Observation" | "Symptom" | "Workout" | "Doctor Appointment" | "General";
+  title: string;
+  content: string;
+  tags?: string[];
+}
+
+export type ThemeMode = "light" | "dark" | "system";
+
+

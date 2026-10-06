@@ -17,16 +17,22 @@ import { AIAssistantView } from "@/components/AIAssistantView";
 import { HydrationView } from "@/components/HydrationView";
 import { NutritionView } from "@/components/NutritionView";
 import { MentalWellnessView } from "@/components/MentalWellnessView";
+import { CalendarView } from "@/components/CalendarView";
+import { PersonalGoalsView } from "@/components/PersonalGoalsView";
+import { HealthNotesView } from "@/components/HealthNotesView";
 import { ToastContainer } from "@/components/ToastContainer";
 import { MedicalDisclaimerBanner } from "@/components/MedicalDisclaimer";
 
 function MainApp() {
-  const { isAuthenticated } = useHealth();
+  const { isAuthenticated, t } = useHealth();
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const validTabs = [
     "dashboard",
+    "calendar",
+    "goals",
+    "notes",
     "assistant",
     "metrics",
     "activity",
@@ -97,6 +103,9 @@ function MainApp() {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             {activeTab === "dashboard" && <DashboardView onNavigate={handleTabChange} />}
+            {activeTab === "calendar" && <CalendarView />}
+            {activeTab === "goals" && <PersonalGoalsView />}
+            {activeTab === "notes" && <HealthNotesView />}
             {activeTab === "assistant" && <AIAssistantView />}
             {activeTab === "metrics" && <MetricsView />}
             {activeTab === "activity" && <ActivityView />}
@@ -114,17 +123,16 @@ function MainApp() {
           <footer className="mt-auto px-6 py-6 border-t border-slate-200/80 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 text-xs text-slate-500 dark:text-slate-400 text-center">
             <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
               <p>
-                <strong>HealthTrack</strong> • Modern Health & Vitals Monitoring for Students & General Users
+                <strong>{t.appName}</strong> • {t.appSubtitle}
               </p>
               <p className="text-[11px] text-slate-400">
-                Sample Data Only — Not Medical Advice or Diagnosis.
+                {t.disclaimer}
               </p>
             </div>
           </footer>
         </div>
       </div>
 
-      {/* Toast Notification Mount */}
       <ToastContainer />
     </div>
   );

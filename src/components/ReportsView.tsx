@@ -13,11 +13,29 @@ import {
   CheckCircle2,
   User,
   Share2,
+  Moon,
+  Droplet,
+  Footprints,
+  Pill,
+  FileText,
 } from "lucide-react";
 import { MedicalDisclaimerBadge } from "./MedicalDisclaimer";
 
 export function ReportsView() {
-  const { profile, vitals, todayActivity, latestSleep, healthScoreData, showToast, reminders, meals } = useHealth();
+  const {
+    profile,
+    vitals,
+    todayActivity,
+    latestSleep,
+    waterIntakeTodayMl,
+    healthScoreData,
+    showToast,
+    reminders,
+    healthNotes,
+    personalGoals,
+    t,
+  } = useHealth();
+
   const [reportPeriod, setReportPeriod] = useState<"weekly" | "monthly">("weekly");
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -69,10 +87,10 @@ export function ReportsView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Health Reports & Clinical Summaries
+            {t.medicalSummaryReport}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Generate printable medical summaries, doctor shareable links, and longitudinal vital exports
+            {t.reportsSubtitle}
           </p>
         </div>
 
@@ -82,236 +100,223 @@ export function ReportsView() {
             className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
-            Doctor Share Link
+            {t.shareDoctorLink}
           </button>
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            Export CSV
+            {t.exportCsv}
           </button>
           <button
             onClick={handlePrint}
             className="flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-sky-600/20 transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
-            Print / PDF Summary
+            {t.printPdf}
           </button>
         </div>
       </div>
 
-      {/* Printable Clinical Summary Document */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-sm print:border-none print:p-0">
+      {/* Main Printable Medical Summary Sheet */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-md space-y-6 print:p-0 print:border-none print:shadow-none">
         {/* Document Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-sky-600 dark:text-sky-400">HealthTrack</span>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                • Vitals & Health Summary
+              <span className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                HealthTrack <span className="text-sky-600">Pro</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300">
+                Official Clinical Summary
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Generated on {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            <p className="text-xs text-slate-400 mt-1">
+              Generated on {new Date().toLocaleDateString(undefined, { dateStyle: "full" })}
             </p>
           </div>
-          <MedicalDisclaimerBadge />
+
+          <div className="text-left sm:text-right text-xs text-slate-500 dark:text-slate-400">
+            <p className="font-bold text-slate-900 dark:text-white">Primary Care Physician:</p>
+            <p>{profile.emergencyContact.doctorName || "Dr. Sarah Jenkins, MD"}</p>
+            <p>{profile.emergencyContact.doctorPhone || "+1 (555) 987-6543"}</p>
+          </div>
         </div>
 
-        {/* Patient / User Profile Info Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-b border-slate-100 dark:border-slate-800 text-xs">
+        {/* Patient Demographics Banner */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
           <div>
-            <span className="text-slate-400 block">Patient / User</span>
-            <span className="font-bold text-slate-900 dark:text-white text-sm">{profile.name}</span>
+            <span className="text-slate-400 block">{t.patientName}</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">{profile.name}</span>
           </div>
           <div>
-            <span className="text-slate-400 block">Age / Gender</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
+            <span className="text-slate-400 block">Age & Gender</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">
               {profile.age} yrs • {profile.gender}
             </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Blood Type</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{profile.bloodGroup}</span>
+            <span className="text-slate-400 block">Height / Weight / Blood</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">
+              {profile.heightCm} cm • {profile.weightKg} kg • {profile.bloodGroup}
+            </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Height & Weight</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {profile.heightCm} cm • {profile.weightKg} kg
+            <span className="text-slate-400 block">{t.emergencyContact}</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">
+              {profile.emergencyContact.name} ({profile.emergencyContact.phone})
             </span>
           </div>
         </div>
 
-        {/* Aggregate Clinical Metrics */}
-        <div className="py-6 space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            1. Longitudinal Vitals Averages
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Average Resting HR</span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                {avgHr} <span className="text-xs font-normal text-slate-400">bpm</span>
-              </p>
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                Within optimal 60-100 threshold
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Mean Arterial Blood Pressure</span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                {avgSys}/{avgDia} <span className="text-xs font-normal text-slate-400">mmHg</span>
-              </p>
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                Normotensive standard
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Overall Health Score</span>
-              <p className="text-2xl font-bold text-sky-600 dark:text-sky-400 mt-1">
-                {healthScoreData.overallScore} <span className="text-xs font-normal text-slate-400">/ 100</span>
-              </p>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                {healthScoreData.statusText}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Prescribed Medications & Care Reminders Table */}
-        <div className="py-5 border-t border-slate-100 dark:border-slate-800 space-y-3">
-          <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            2. Active Care Reminders & Medication Schedule
-          </h4>
-          {reminders.length === 0 ? (
-            <p className="text-xs text-slate-400">No active medication records logged.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400">
-                    <th className="py-2">Medication / Task</th>
-                    <th className="py-2">Dosage / Instructions</th>
-                    <th className="py-2">Scheduled Time</th>
-                    <th className="py-2">Frequency</th>
-                    <th className="py-2 text-right">Adherence Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                  {reminders.map((r) => (
-                    <tr key={r.id}>
-                      <td className="py-2 font-semibold text-slate-900 dark:text-white">{r.title}</td>
-                      <td className="py-2">{r.dosageOrDetail || "As directed"}</td>
-                      <td className="py-2">{r.time}</td>
-                      <td className="py-2">{r.frequency}</td>
-                      <td className="py-2 text-right">
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                          {r.isActive ? "Active (Adherent)" : "Paused"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Known Medical Conditions & Allergies */}
-        <div className="py-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-1.5">Disclosed Medical Conditions:</h4>
-            <ul className="list-disc list-inside text-slate-600 dark:text-slate-400 space-y-0.5">
+        {/* Medical Conditions & Allergies */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+              {t.medicalConditions}
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
               {profile.medicalConditions.length > 0 ? (
-                profile.medicalConditions.map((cond, i) => <li key={i}>{cond}</li>)
+                profile.medicalConditions.map((c, i) => (
+                  <span key={i} className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold">
+                    {c}
+                  </span>
+                ))
               ) : (
-                <li>None declared</li>
+                <span className="text-xs text-slate-400">None reported</span>
               )}
-            </ul>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-1.5">Known Allergies:</h4>
-            <ul className="list-disc list-inside text-slate-600 dark:text-slate-400 space-y-0.5">
+
+          <div className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-2">
+              {t.allergies}
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
               {profile.allergies.length > 0 ? (
-                profile.allergies.map((all, i) => <li key={i}>{all}</li>)
+                profile.allergies.map((a, i) => (
+                  <span key={i} className="px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+                    {a}
+                  </span>
+                ))
               ) : (
-                <li>No known allergies</li>
+                <span className="text-xs text-slate-400">No known allergies</span>
               )}
-            </ul>
+            </div>
           </div>
         </div>
 
-        {/* Emergency Contact & Primary Physician */}
-        <div className="py-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-1">Emergency Contact:</h4>
-            <p className="text-slate-600 dark:text-slate-400">
-              {profile.emergencyContact.name || "None designated"} ({profile.emergencyContact.relationship || "N/A"}) • {profile.emergencyContact.phone || "N/A"}
+        {/* Selected Vitals Trends Summary */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+            <Heart className="w-4 h-4 text-rose-500" />
+            Cardiovascular & Hemodynamic Trends
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400 block">Avg Heart Rate</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">{avgHr} BPM</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400 block">Avg Blood Pressure</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">{avgSys}/{avgDia} mmHg</span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400 block">Daily Steps</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">
+                {todayActivity.steps.toLocaleString()} / {personalGoals.dailySteps.toLocaleString()}
+              </span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] text-slate-400 block">Daily Health Score</span>
+              <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                {healthScoreData.overallScore}/100
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sleep, Hydration & Activity Summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              <Moon className="w-4 h-4" />
+              <span>Sleep & Recovery</span>
+            </div>
+            <p className="text-xs text-slate-700 dark:text-slate-300">
+              Latest: <strong className="text-slate-900 dark:text-white">{latestSleep ? latestSleep.totalHours : 7.3} hrs</strong> (Score: {latestSleep ? latestSleep.qualityScore : 86}/100)
             </p>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-1">Assigned Physician / Clinic:</h4>
-            <p className="text-slate-600 dark:text-slate-400">
-              {profile.emergencyContact.doctorName || "Dr. Sarah Jenkins, MD"} • {profile.emergencyContact.doctorPhone || "+1 (555) 987-6543"}
+
+          <div className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-cyan-600 dark:text-cyan-400">
+              <Droplet className="w-4 h-4" />
+              <span>Hydration Status</span>
+            </div>
+            <p className="text-xs text-slate-700 dark:text-slate-300">
+              Today: <strong className="text-slate-900 dark:text-white">{waterIntakeTodayMl} ml</strong> / Goal: {personalGoals.dailyWaterMl} ml
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800">
+            <div className="flex items-center gap-2 mb-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <Footprints className="w-4 h-4" />
+              <span>Workouts & Fitness</span>
+            </div>
+            <p className="text-xs text-slate-700 dark:text-slate-300">
+              Active: <strong className="text-slate-900 dark:text-white">{todayActivity.activeMinutes} mins</strong> ({todayActivity.caloriesBurned} kcal burned)
             </p>
           </div>
         </div>
 
-        {/* Footer Medical Disclaimer Note */}
-        <div className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-          <p>
-            <strong>NOTICE TO HEALTHCARE PROVIDERS:</strong> This report is a digital health log export compiled from self-reported readings and mock sensor data. It does not replace clinical laboratory diagnostic tests or formal triage.
-          </p>
+        {/* Medication & Care Schedule List */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+            <Pill className="w-4 h-4 text-rose-500" />
+            Current Prescriptions & Supplement Schedule
+          </h3>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200/70 dark:border-slate-800 rounded-2xl overflow-hidden text-xs">
+            {reminders.map((rem) => (
+              <div key={rem.id} className="p-3 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{rem.title}</span>
+                  {rem.dosageOrDetail && (
+                    <span className="text-slate-400 ml-2">({rem.dosageOrDetail})</span>
+                  )}
+                </div>
+                <span className="text-slate-500 dark:text-slate-400 font-medium">
+                  {rem.time} • {rem.frequency}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Health Observations & Notes */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-sky-500" />
+            Recent Observations & Patient Notes
+          </h3>
+          <div className="space-y-2">
+            {healthNotes.slice(0, 3).map((note) => (
+              <div key={note.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
+                <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200 mb-1">
+                  <span>{note.title}</span>
+                  <span className="text-[10px] text-slate-400 font-normal">{note.date}</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-400">{note.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Disclaimer Footer */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center text-[10px] text-slate-400">
+          <p>{t.disclaimer}</p>
         </div>
       </div>
-
-      {/* Doctor Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
-                  <Share2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                    Doctor & Clinic Share Portal
-                  </h3>
-                  <p className="text-[11px] text-slate-400">Generate temporary tokenized clinical view</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-center space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                Encrypted Patient Access Link
-              </span>
-              <p className="text-xs font-mono text-slate-600 dark:text-slate-300 break-all p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                https://healthtrack.io/portal/vitals?user=alex_morgan&token=29fbc8
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleCopyDoctorLink}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer"
-              >
-                {copiedLink ? "✓ Copied!" : "Copy Share Link"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -20,10 +20,16 @@ import {
   Zap,
   Utensils,
   Brain,
+  AlertTriangle,
+  FileText,
+  Calendar as CalendarIcon,
+  Target,
+  Info,
 } from "lucide-react";
 import { VitalCard } from "./VitalCard";
 import { HealthScoreCard } from "./HealthScoreCard";
 import { WeeklyHealthChart } from "./WeeklyHealthChart";
+import { TodayAtAGlance } from "./TodayAtAGlance";
 import { getBpCategory } from "@/utils/healthCalc";
 import { AddReadingModal } from "./AddReadingModal";
 
@@ -43,51 +49,84 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
     markReminderTaken,
     meals,
     todayMood,
+    healthNotes,
+    personalGoals,
+    t,
   } = useHealth();
 
   const [showReadingModal, setShowReadingModal] = useState(false);
 
+  // Blood Pressure categorization
   const bpStatus = latestVital
     ? getBpCategory(latestVital.systolicBp, latestVital.diastolicBp)
-    : { category: "Pending" as const, badgeClass: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", desc: "No readings logged yet" };
+    : { category: "Normal" as const, badgeClass: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300", desc: "Optimal baseline" };
 
   // Status calculations for vitals
   const hrStatus: { label: string; variant: "success" | "warning" | "danger" | "info" } = latestVital
     ? latestVital.heartRate >= 60 && latestVital.heartRate <= 100
-      ? { label: "Optimal", variant: "success" }
+      ? { label: t.statusNormal, variant: "success" }
       : latestVital.heartRate < 60
-      ? { label: "Bradycardia", variant: "info" }
-      : { label: "Elevated", variant: "warning" }
-    : { label: "No Data", variant: "info" };
+      ? { label: t.statusAttentionRequired, variant: "info" }
+      : { label: t.statusElevated, variant: "warning" }
+    : { label: t.statusNormal, variant: "info" };
 
   const spo2Status: { label: string; variant: "success" | "warning" | "danger" | "info" } = latestVital
     ? latestVital.spo2 >= 95
-      ? { label: "Optimal", variant: "success" }
+      ? { label: t.statusOptimal, variant: "success" }
       : latestVital.spo2 >= 90
-      ? { label: "Acceptable", variant: "warning" }
-      : { label: "Hypoxia Risk", variant: "danger" }
-    : { label: "No Data", variant: "info" };
+      ? { label: t.statusElevated, variant: "warning" }
+      : { label: t.statusAttentionRequired, variant: "danger" }
+    : { label: t.statusNormal, variant: "info" };
 
   const tempStatus: { label: string; variant: "success" | "warning" | "danger" | "info" } = latestVital
     ? latestVital.temperature >= 97.5 && latestVital.temperature <= 99.0
-      ? { label: "Normal", variant: "success" }
+      ? { label: t.statusNormal, variant: "success" }
       : latestVital.temperature > 99.0
-      ? { label: "Elevated", variant: "warning" }
-      : { label: "Low", variant: "warning" }
-    : { label: "No Data", variant: "info" };
+      ? { label: t.statusElevated, variant: "warning" }
+      : { label: t.statusAttentionRequired, variant: "warning" }
+    : { label: t.statusNormal, variant: "info" };
 
-  const stepPercent = Math.min(100, Math.round((todayActivity.steps / (profile.dailyStepGoal || 8000)) * 100));
-  const waterPercent = Math.min(
-    100,
-    Math.round((waterIntakeTodayMl / (profile.dailyWaterGoalMl || 2500)) * 100)
-  );
+  // Check if any reading warrants a non-diagnostic "Review this reading" alert
+  const hasReadingAlert =
+    latestVital &&
+    (latestVital.heartRate < 55 ||
+      latestVital.heartRate > 105 ||
+      latestVital.systolicBp > 135 ||
+      latestVital.diastolicBp > 90 ||
+      latestVital.spo2 < 95);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const stepPercent = Math.min(100, Math.round((todayActivity.steps / (personalGoals.dailySteps || 8000)) * 100));
   const activeReminders = reminders.filter((r) => r.isActive).slice(0, 4);
+  const recentNotes = healthNotes.slice(0, 3);
 
   return (
     <div className="space-y-6">
-      {/* 1. Daily Health Score Hero */}
+      {/* 1. UNIQUE FEATURE – TODAY AT A GLANCE */}
+      <TodayAtAGlance onNavigate={onNavigate} />
+
+      {/* Reading Alert Banner (Non-diagnostic alert) */}
+      {hasReadingAlert && (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-300 dark:border-amber-700/50 flex items-start gap-3.5">
+          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                {t.reviewReadingPrompt}
+              </h4>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/60 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200">
+                {t.statusAttentionRequired}
+              </span>
+            </div>
+            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+              {t.reviewReadingNote} (HR: {latestVital?.heartRate} BPM, BP: {latestVital?.systolicBp}/{latestVital?.diastolicBp} mmHg).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Daily Health Score Hero */}
       <HealthScoreCard />
 
       {/* AI Health Copilot Quick Insight Strip */}
@@ -99,7 +138,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                HealthTrack AI Copilot
+                {t.appName} AI Copilot
               </h4>
               <span className="px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 text-[9px] font-black uppercase tracking-wider">
                 Active Analysis
@@ -120,11 +159,11 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
         </button>
       </div>
 
-      {/* 2. Vitals Grid (6 Clinical & Activity Cards) */}
+      {/* 3. Vitals Grid (6 Clinical & Activity Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Heart Rate */}
         <VitalCard
-          title="Heart Rate"
+          title={t.heartRate}
           value={latestVital ? latestVital.heartRate : "--"}
           unit="BPM"
           icon={Heart}
@@ -138,7 +177,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
         {/* Blood Pressure */}
         <VitalCard
-          title="Blood Pressure"
+          title={t.bloodPressure}
           value={latestVital ? `${latestVital.systolicBp}/${latestVital.diastolicBp}` : "--/--"}
           unit="mmHg"
           icon={Activity}
@@ -155,7 +194,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
         {/* SpO2 */}
         <VitalCard
-          title="Blood Oxygen"
+          title={t.spo2}
           value={latestVital ? latestVital.spo2 : "--"}
           unit="%"
           icon={Droplet}
@@ -169,7 +208,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
         {/* Temperature */}
         <VitalCard
-          title="Temperature"
+          title={t.temperature}
           value={latestVital ? latestVital.temperature : "--"}
           unit="°F"
           icon={Thermometer}
@@ -183,9 +222,9 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
         {/* Daily Steps */}
         <VitalCard
-          title="Daily Steps"
+          title={t.steps}
           value={todayActivity.steps.toLocaleString()}
-          unit={`/ ${(profile.dailyStepGoal || 8000).toLocaleString()}`}
+          unit={`/ ${(personalGoals.dailySteps || 8000).toLocaleString()}`}
           icon={Footprints}
           iconColor="text-emerald-500"
           iconBg="bg-emerald-50 dark:bg-emerald-950/40"
@@ -200,7 +239,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
         {/* Sleep */}
         <VitalCard
-          title="Sleep Rest"
+          title={t.sleepMetric}
           value={latestSleep ? latestSleep.totalHours : "--"}
           unit="hours"
           icon={Moon}
@@ -216,17 +255,64 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
         />
       </div>
 
-      {/* 3. Weekly Trends Chart & Hydration / Schedule Split */}
+      {/* 4. Weekly Trends Chart & Quick Navigation Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left (2 cols): Weekly Chart */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <WeeklyHealthChart />
+
+          {/* Quick Shortcuts Grid (Calendar, Goals, Notes, Reminders) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              onClick={() => onNavigate("calendar")}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-sky-500 text-left transition-all group"
+            >
+              <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 w-fit mb-2 group-hover:scale-110 transition-transform">
+                <CalendarIcon className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">{t.calendar}</div>
+              <div className="text-[10px] text-slate-400">Monthly logs</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate("goals")}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 text-left transition-all group"
+            >
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 w-fit mb-2 group-hover:scale-110 transition-transform">
+                <Target className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">{t.goals}</div>
+              <div className="text-[10px] text-slate-400">5 Daily targets</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate("notes")}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500 text-left transition-all group"
+            >
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 w-fit mb-2 group-hover:scale-110 transition-transform">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">{t.notes}</div>
+              <div className="text-[10px] text-slate-400">Observations</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate("reports")}
+              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-amber-500 text-left transition-all group"
+            >
+              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 w-fit mb-2 group-hover:scale-110 transition-transform">
+                <Info className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">{t.reports}</div>
+              <div className="text-[10px] text-slate-400">Medical summary</div>
+            </button>
+          </div>
         </div>
 
         {/* Right (1 col): Hydration Station & Today's Schedule */}
         <div className="space-y-6">
           {/* Hydration Interactive Widget */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
@@ -237,7 +323,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                     Hydration Station
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Daily Goal: {profile.dailyWaterGoalMl} ml
+                    Daily Goal: {personalGoals.dailyWaterMl} ml
                   </p>
                 </div>
               </div>
@@ -246,155 +332,93 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               </span>
             </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden mb-3">
-              <div
-                className="bg-gradient-to-r from-sky-400 to-cyan-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${waterPercent}%` }}
-              />
-            </div>
-
-            {/* Quick Log Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => logWater(250)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" /> 250 ml
-              </button>
-              <button
-                onClick={() => logWater(500)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" /> 500 ml
-              </button>
-              <button
-                onClick={() => logWater(750)}
-                className="py-1.5 px-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" /> 750 ml
-              </button>
+            {/* Quick Add Buttons */}
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              {[
+                { label: "+250 ml", amount: 250 },
+                { label: "+500 ml", amount: 500 },
+                { label: "+750 ml", amount: 750 },
+              ].map((btn) => (
+                <button
+                  key={btn.amount}
+                  onClick={() => logWater(btn.amount)}
+                  className="py-2 px-3 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                >
+                  {btn.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Quick Dual Card: Nutrition & Mental State */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Nutrition Card */}
-            <div
-              onClick={() => onNavigate("nutrition")}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs hover:border-emerald-500/50 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                  <Utensils className="w-4 h-4" />
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-              </div>
-              <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">Nutrition</h5>
-              <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {meals.reduce((sum, m) => sum + m.calories, 0)} kcal
-              </p>
-              <span className="text-[10px] text-slate-400">{meals.length} meals logged</span>
-            </div>
-
-            {/* Mental Wellness Card */}
-            <div
-              onClick={() => onNavigate("wellness")}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-xs hover:border-indigo-500/50 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                  <Brain className="w-4 h-4" />
-                </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
-              </div>
-              <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">Mood State</h5>
-              <p className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
-                {todayMood ? todayMood.primaryMood : "Check-in"}
-              </p>
-              <span className="text-[10px] text-slate-400">4-7-8 Breathing</span>
-            </div>
-          </div>
-
-          {/* Today's Care Reminders Preview */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
+          {/* Today's Care Reminders */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400">
+                <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
                   <Pill className="w-4 h-4" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Today&apos;s Care Schedule
-                </h4>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {t.reminders}
+                  </h4>
+                  <p className="text-[11px] text-slate-400">Scheduled checks & meds</p>
+                </div>
               </div>
               <button
                 onClick={() => onNavigate("reminders")}
-                className="text-xs text-sky-600 dark:text-sky-400 font-semibold hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
               >
-                All <ArrowRight className="w-3 h-3" />
+                View all
               </button>
             </div>
 
             <div className="space-y-2.5">
-              {activeReminders.length === 0 ? (
-                <div className="py-4 text-center">
-                  <p className="text-xs text-slate-400">No active reminders scheduled.</p>
-                  <button
-                    onClick={() => onNavigate("reminders")}
-                    className="text-xs text-sky-600 dark:text-sky-400 font-medium hover:underline mt-1 inline-block"
+              {activeReminders.map((rem) => {
+                const todayStr = new Date().toISOString().split("T")[0];
+                const isCompleted = rem.lastTakenDate === todayStr;
+
+                return (
+                  <div
+                    key={rem.id}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                      isCompleted
+                        ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/40"
+                        : "bg-slate-50/70 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800"
+                    }`}
                   >
-                    + Add your first reminder
-                  </button>
-                </div>
-              ) : (
-                activeReminders.map((rem) => {
-                  const isDone = rem.lastTakenDate === todayStr;
-                  return (
-                    <div
-                      key={rem.id}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {rem.title}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
+                          {rem.time}
+                        </span>
+                      </div>
+                      {rem.dosageOrDetail && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">{rem.dosageOrDetail}</p>
+                      )}
+                    </div>
+
+                    <button
                       onClick={() => markReminderTaken(rem.id)}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
-                        isDone
-                          ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-800/40 opacity-75"
-                          : "bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100"
+                      className={`p-1.5 rounded-xl text-xs font-bold transition-all ${
+                        isCompleted
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-colors ${
-                            isDone
-                              ? "bg-emerald-500 border-emerald-500 text-white"
-                              : "border-slate-300 dark:border-slate-600 text-transparent"
-                          }`}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p
-                            className={`text-xs font-semibold truncate ${
-                              isDone
-                                ? "line-through text-slate-400 dark:text-slate-500"
-                                : "text-slate-800 dark:text-slate-200"
-                            }`}
-                          >
-                            {rem.title}
-                          </p>
-                          <span className="text-[10px] text-slate-400 block">{rem.time}</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                        {rem.category}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add Reading Modal */}
+      {/* Reading Modal */}
       <AddReadingModal
         isOpen={showReadingModal}
         onClose={() => setShowReadingModal(false)}

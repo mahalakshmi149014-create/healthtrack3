@@ -9,7 +9,10 @@ import {
   MealItem,
   MoodEntry,
   LabTestReport,
+  HealthNoteEntry,
+  PersonalHealthGoals,
 } from "@/types/health";
+
 
 export const initialProfile: UserHealthProfile = {
   name: "Alex Morgan",
@@ -365,4 +368,43 @@ export const initialNotifications: NotificationItem[] = [
     isRead: true,
   },
 ];
+
+export const initialHealthNotes: HealthNoteEntry[] = [
+  {
+    id: "note-1",
+    date: new Date().toISOString().split("T")[0],
+    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+    category: "Workout",
+    title: "Morning 5k Run Completed",
+    content: "Felt strong during the 30-minute interval jog. Good cardiovascular recovery rate, heart rate normalized within 4 minutes.",
+    tags: ["Running", "High Energy", "Post-Recovery"],
+  },
+  {
+    id: "note-2",
+    date: new Date(Date.now() - 86400000).toISOString().split("T")[0],
+    timestamp: new Date(Date.now() - 86400000 - 1000 * 60 * 300).toISOString(),
+    category: "Observation",
+    title: "Slight fatigue in the afternoon",
+    content: "Noticed brief lethargy around 3 PM after studying. Drank 500ml water and took a 10 min stroll outside, felt refreshed.",
+    tags: ["Hydration", "Focus", "Rest"],
+  },
+  {
+    id: "note-3",
+    date: new Date(Date.now() - 86400000 * 3).toISOString().split("T")[0],
+    timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
+    category: "Doctor Appointment",
+    title: "Routine Primary Care Checkup with Dr. Jenkins",
+    content: "Reviewed blood pressure (118/78 mmHg) and lipid panel. Dr. confirmed vitals are in optimal ranges. Advised keeping water intake around 2.5 - 3 Liters.",
+    tags: ["Checkup", "AHA Optimal", "Doctor Review"],
+  },
+];
+
+export const initialPersonalGoals: PersonalHealthGoals = {
+  dailySteps: 8000,
+  dailyWaterMl: 2500,
+  dailySleepHours: 8,
+  dailyWorkoutMinutes: 30,
+  dailyActiveCalories: 500,
+};
+
 

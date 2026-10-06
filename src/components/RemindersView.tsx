@@ -15,12 +15,13 @@ import {
   Clock,
   Calendar,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { AddReminderModal } from "./AddReminderModal";
 import { ReminderItem } from "@/types/health";
 
 export function RemindersView() {
-  const { reminders, toggleReminder, markReminderTaken, deleteReminder } = useHealth();
+  const { reminders, toggleReminder, markReminderTaken, deleteReminder, t } = useHealth();
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
@@ -54,19 +55,19 @@ export function RemindersView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Care Schedules & Health Reminders
+            {t.reminders}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Automated alerts for medications, hydration checkpoints, workouts, and doctor checkups
+            Smart automated alerts for medications, water intake, workouts, sleep, and custom schedules
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-sky-600/20 transition-all self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-xs shadow-sky-600/20 transition-all self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          Add Care Reminder
+          {t.addReminder}
         </button>
       </div>
 
@@ -74,16 +75,16 @@ export function RemindersView() {
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-3">
         {[
           { id: "all", label: "All Reminders" },
-          { id: "medicine", label: "Medication & Supplements" },
-          { id: "water", label: "Hydration" },
-          { id: "exercise", label: "Workouts" },
-          { id: "checkup", label: "Doctor Checkups" },
-          { id: "sleep", label: "Sleep Rest" },
+          { id: "medicine", label: t.medicineReminders },
+          { id: "water", label: t.waterReminders },
+          { id: "exercise", label: t.exerciseReminders },
+          { id: "sleep", label: t.sleepReminders },
+          { id: "checkup", label: t.customReminders },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveCategory(tab.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeCategory === tab.id
                 ? "bg-sky-600 text-white font-semibold shadow-xs shadow-sky-600/20"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -97,102 +98,79 @@ export function RemindersView() {
       {/* Reminders List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredReminders.length === 0 ? (
-          <div className="col-span-full p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-            <BellRing className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              No reminders scheduled for this category.
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Click &quot;Add Care Reminder&quot; above to create recurring medicine or activity alarms.
+          <div className="col-span-full p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
+            <BellRing className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              No reminders in this category. Click &ldquo;Add Reminder&rdquo; to create one.
             </p>
           </div>
         ) : (
-          filteredReminders.map((rem) => {
-            const isTakenToday = rem.lastTakenDate === todayStr;
+          filteredReminders.map((reminder) => {
+            const isCompletedToday = reminder.lastTakenDate === todayStr;
+
             return (
               <div
-                key={rem.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border p-5 shadow-xs transition-all flex flex-col justify-between ${
-                  isTakenToday
-                    ? "border-emerald-200/70 dark:border-emerald-800/40 bg-emerald-50/20 dark:bg-emerald-950/10"
-                    : "border-slate-200/80 dark:border-slate-800"
+                key={reminder.id}
+                className={`p-5 rounded-3xl border transition-all ${
+                  isCompletedToday
+                    ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-900/40"
+                    : reminder.isActive
+                    ? "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-xs"
+                    : "bg-slate-50/50 dark:bg-slate-900/50 border-slate-200/40 dark:border-slate-800/40 opacity-60"
                 }`}
               >
-                <div>
-                  {/* Top bar with Category icon & Toggle switch */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
-                        {getCategoryIcon(rem.category)}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-0.5">
+                      {getCategoryIcon(reminder.category)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          {reminder.title}
+                        </h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          {reminder.frequency}
+                        </span>
                       </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        {rem.category}
-                      </span>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      {/* Active toggle */}
-                      <button
-                        onClick={() => toggleReminder(rem.id)}
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
-                          rem.isActive
-                            ? "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
-                            : "bg-slate-100 text-slate-400 dark:bg-slate-800"
-                        }`}
-                      >
-                        {rem.isActive ? "Active" : "Paused"}
-                      </button>
+                      {reminder.dosageOrDetail && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          {reminder.dosageOrDetail}
+                        </p>
+                      )}
 
-                      {/* Delete */}
-                      <button
-                        onClick={() => deleteReminder(rem.id)}
-                        className="p-1 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
-                        title="Delete reminder"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+                          <Clock className="w-3.5 h-3.5 text-sky-500" />
+                          {reminder.time}
+                        </span>
+                        <span>•</span>
+                        <span>{reminder.category}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Title & Instructions */}
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {rem.title}
-                  </h3>
-                  {rem.dosageOrDetail && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {rem.dosageOrDetail}
-                    </p>
-                  )}
-
-                  {/* Meta details */}
-                  <div className="mt-3 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-sky-500" />
-                      {rem.time}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                      {rem.frequency}
-                    </span>
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => markReminderTaken(reminder.id)}
+                      title="Mark as completed today"
+                      className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isCompletedToday
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteReminder(reminder.id)}
+                      className="p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                </div>
-
-                {/* Bottom Action: Mark Done / Taken */}
-                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
-                    {isTakenToday ? "✓ Completed for today" : "Pending action"}
-                  </span>
-                  <button
-                    onClick={() => markReminderTaken(rem.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                      isTakenToday
-                        ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
-                        : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-600"
-                    }`}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {isTakenToday ? "Mark as Pending" : "Mark as Completed"}
-                  </button>
                 </div>
               </div>
             );
@@ -200,11 +178,7 @@ export function RemindersView() {
         )}
       </div>
 
-      {/* Add Reminder Modal */}
-      <AddReminderModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-      />
+      <AddReminderModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
     </div>
   );
 }
